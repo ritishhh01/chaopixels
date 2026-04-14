@@ -176,59 +176,19 @@ The backend exposes a clean REST API:
 
 ## How to Run Locally
 
-### Prerequisites
-- Node.js 18+
-- pnpm (`npm install -g pnpm`)
-- A PostgreSQL database
-- A [Clerk](https://clerk.com) account (free)
-- A [Fal.ai](https://fal.ai) account (for AI generation)
+For a full step-by-step walkthrough — including database setup, getting API keys, environment variables, and troubleshooting — see the dedicated setup guide:
 
-### 1. Clone the repo
-```bash
-git clone https://github.com/ritishhh01/chaopixels.git
-cd chaopixels
-pnpm install
-```
+### 👉 [SETUP.md — Complete Local Setup Guide](./SETUP.md)
 
-### 2. Set up environment variables
-
-Copy the example files and fill in your values:
-```bash
-cp artifacts/api-server/.env.example artifacts/api-server/.env
-cp artifacts/luminawalls/.env.example artifacts/luminawalls/.env
-```
-
-**API Server (`artifacts/api-server/.env`):**
-```env
-ADMIN_EMAIL=your-email@example.com
-DATABASE_URL=postgresql://...
-CLERK_SECRET_KEY=sk_test_...
-FAL_API_KEY=your-fal-key
-DEFAULT_OBJECT_STORAGE_BUCKET_ID=your-bucket-id
-SESSION_SECRET=random-secret-string
-```
-
-**Frontend (`artifacts/luminawalls/.env`):**
-```env
-VITE_ADMIN_EMAIL=your-email@example.com
-VITE_CLERK_PUBLISHABLE_KEY=pk_test_...
-```
-
-### 3. Push the database schema
-```bash
-pnpm --filter @workspace/db run db:push
-```
-
-### 4. Start the servers
-```bash
-# In one terminal — backend
-pnpm --filter @workspace/api-server run dev
-
-# In another terminal — frontend
-pnpm --filter @workspace/luminawalls run dev
-```
-
-Open `http://localhost:5173` in your browser.
+**Quick summary:**
+1. Clone the repo and run `pnpm install`
+2. Set up a PostgreSQL database
+3. Get free API keys from [Clerk](https://clerk.com) and [Fal.ai](https://fal.ai)
+4. Create `.env` files for both the API server and frontend
+5. Run `pnpm --filter @workspace/db run db:push` to create the tables
+6. Start the backend: `pnpm --filter @workspace/api-server run dev`
+7. Start the frontend: `pnpm --filter @workspace/luminawalls run dev`
+8. Open `http://localhost:5173`
 
 ---
 
