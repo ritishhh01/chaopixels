@@ -1,0 +1,773 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: LuminaWalls API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: wallpapers
+    description: Wallpaper operations
+  - name: favorites
+    description: Favorites operations
+  - name: generate
+    description: AI generation operations
+  - name: auth
+    description: Auth operations
+  - name: Storage
+    description: Object storage upload and serving endpoints.
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /auth/user:
+    get:
+      operationId: getCurrentAuthUser
+      tags: [auth]
+      summary: Get current authenticated user
+      parameters:
+        - $ref: "#/components/parameters/AuthorizationSessionHeader"
+        - $ref: "#/components/parameters/SessionCookie"
+      responses:
+        "200":
+          description: Auth status resolved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUserEnvelope"
+
+  /login:
+    get:
+      operationId: beginBrowserLogin
+      tags: [auth]
+      summary: Start the browser OIDC login flow
+      parameters:
+        - name: returnTo
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "302":
+          description: Redirect to OIDC authorization endpoint
+
+  /callback:
+    get:
+      operationId: handleBrowserLoginCallback
+      tags: [auth]
+      summary: Complete the browser OIDC login flow
+      parameters:
+        - name: code
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: state
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: iss
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "302":
+          description: Redirect after login
+
+  /logout:
+    get:
+      operationId: logoutBrowserSession
+      tags: [auth]
+      summary: Clear session and logout
+      parameters:
+        - $ref: "#/components/parameters/AuthorizationSessionHeader"
+        - $ref: "#/components/parameters/SessionCookie"
+      responses:
+        "302":
+          description: Redirect to OIDC logout
+
+  /mobile-auth/token-exchange:
+    post:
+      operationId: exchangeMobileAuthorizationCode
+      tags: [auth]
+      summary: Exchange mobile OIDC code for session token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MobileTokenExchangeRequest"
+      responses:
+        "200":
+          description: Session created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MobileTokenExchangeSuccess"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /mobile-auth/logout:
+    post:
+      operationId: logoutMobileSession
+      tags: [auth]
+      summary: Delete a mobile session token
+      parameters:
+        - $ref: "#/components/parameters/AuthorizationSessionHeader"
+      responses:
+        "200":
+          description: Logout processed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LogoutSuccess"
+
+  /wallpapers:
+    get:
+      operationId: listWallpapers
+      tags: [wallpapers]
+      summary: List all wallpapers with optional filters
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: resolution
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: List of wallpapers
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WallpaperListResponse"
+
+    post:
+      operationId: createWallpaper
+      tags: [wallpapers]
+      summary: Create a new wallpaper entry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateWallpaperBody"
+      responses:
+        "201":
+          description: Created wallpaper
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Wallpaper"
+
+  /wallpapers/stats:
+    get:
+      operationId: getWallpaperStats
+      tags: [wallpapers]
+      summary: Get wallpaper statistics by category
+      responses:
+        "200":
+          description: Wallpaper stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WallpaperStats"
+
+  /wallpapers/featured:
+    get:
+      operationId: getFeaturedWallpapers
+      tags: [wallpapers]
+      summary: Get featured/trending wallpapers
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 12
+      responses:
+        "200":
+          description: Featured wallpapers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Wallpaper"
+
+  /wallpapers/{id}:
+    get:
+      operationId: getWallpaper
+      tags: [wallpapers]
+      summary: Get a single wallpaper by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Wallpaper
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Wallpaper"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    delete:
+      operationId: deleteWallpaper
+      tags: [wallpapers]
+      summary: Delete a wallpaper
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+
+  /wallpapers/{id}/increment-download:
+    post:
+      operationId: incrementWallpaperDownload
+      tags: [wallpapers]
+      summary: Increment download count for a wallpaper
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Updated wallpaper
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Wallpaper"
+
+  /favorites:
+    get:
+      operationId: listFavorites
+      tags: [favorites]
+      summary: List the current user's favorited wallpapers
+      responses:
+        "200":
+          description: Favorite wallpapers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Wallpaper"
+        "401":
+          description: Not authenticated
+
+  /favorites/{wallpaperId}:
+    post:
+      operationId: addFavorite
+      tags: [favorites]
+      summary: Add a wallpaper to favorites
+      parameters:
+        - name: wallpaperId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "201":
+          description: Added to favorites
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FavoriteEntry"
+        "401":
+          description: Not authenticated
+
+    delete:
+      operationId: removeFavorite
+      tags: [favorites]
+      summary: Remove a wallpaper from favorites
+      parameters:
+        - name: wallpaperId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Removed from favorites
+        "401":
+          description: Not authenticated
+
+  /favorites/check/{wallpaperId}:
+    get:
+      operationId: checkFavorite
+      tags: [favorites]
+      summary: Check if a wallpaper is favorited by the current user
+      parameters:
+        - name: wallpaperId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Favorite status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FavoriteStatus"
+
+  /generate:
+    post:
+      operationId: generateWallpaper
+      tags: [generate]
+      summary: Generate a wallpaper using AI (Fal.ai Flux.1)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenerateWallpaperBody"
+      responses:
+        "200":
+          description: Generated wallpaper result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenerateWallpaperResponse"
+        "500":
+          description: Generation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /storage/uploads/request-url:
+    post:
+      tags: [Storage]
+      operationId: requestUploadUrl
+      summary: Request a presigned URL for file upload
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UploadUrlRequest'
+      responses:
+        '200':
+          description: Presigned upload URL generated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadUrlResponse'
+        '500':
+          description: Failed to generate upload URL.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /storage/objects/{objectPath}:
+    get:
+      tags: [Storage]
+      operationId: getStorageObject
+      summary: Serve an uploaded object
+      parameters:
+        - name: objectPath
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Object content streamed.
+          content:
+            '*/*':
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Object not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+
+components:
+  parameters:
+    AuthorizationSessionHeader:
+      name: Authorization
+      in: header
+      required: false
+      description: Opaque session token — Bearer <sid>
+      schema:
+        type: string
+    SessionCookie:
+      name: sid
+      in: cookie
+      required: false
+      description: Browser session cookie
+      schema:
+        type: string
+
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    AuthUser:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: ["string", "null"]
+        firstName:
+          type: ["string", "null"]
+        lastName:
+          type: ["string", "null"]
+        profileImageUrl:
+          type: ["string", "null"]
+      required:
+        - id
+        - email
+        - firstName
+        - lastName
+        - profileImageUrl
+
+    AuthUserEnvelope:
+      type: object
+      required: [user]
+      properties:
+        user:
+          oneOf:
+            - $ref: "#/components/schemas/AuthUser"
+            - type: "null"
+
+    MobileTokenExchangeRequest:
+      type: object
+      required: [code, code_verifier, redirect_uri, state]
+      properties:
+        code:
+          type: string
+        code_verifier:
+          type: string
+        redirect_uri:
+          type: string
+        state:
+          type: string
+        nonce:
+          type: string
+
+    MobileTokenExchangeSuccess:
+      type: object
+      required: [token]
+      properties:
+        token:
+          type: string
+
+    LogoutSuccess:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
+
+    Wallpaper:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        imageUrl:
+          type: string
+        thumbnailUrl:
+          type: ["string", "null"]
+        downloadUrl:
+          type: string
+        category:
+          type: string
+        resolution:
+          type: string
+        width:
+          type: integer
+        height:
+          type: integer
+        tags:
+          type: array
+          items:
+            type: string
+        fileSize:
+          type: ["integer", "null"]
+        downloadCount:
+          type: integer
+        isFeatured:
+          type: boolean
+        isAiGenerated:
+          type: boolean
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - title
+        - imageUrl
+        - downloadUrl
+        - category
+        - resolution
+        - width
+        - height
+        - tags
+        - downloadCount
+        - isFeatured
+        - isAiGenerated
+        - createdAt
+        - updatedAt
+
+    WallpaperListResponse:
+      type: object
+      properties:
+        wallpapers:
+          type: array
+          items:
+            $ref: "#/components/schemas/Wallpaper"
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+      required:
+        - wallpapers
+        - total
+        - limit
+        - offset
+
+    WallpaperStats:
+      type: object
+      properties:
+        totalWallpapers:
+          type: integer
+        totalDownloads:
+          type: integer
+        byCategory:
+          type: array
+          items:
+            $ref: "#/components/schemas/CategoryCount"
+        aiGenerated:
+          type: integer
+      required:
+        - totalWallpapers
+        - totalDownloads
+        - byCategory
+        - aiGenerated
+
+    CategoryCount:
+      type: object
+      properties:
+        category:
+          type: string
+        count:
+          type: integer
+      required:
+        - category
+        - count
+
+    CreateWallpaperBody:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        imageUrl:
+          type: string
+        thumbnailUrl:
+          type: ["string", "null"]
+        downloadUrl:
+          type: string
+        category:
+          type: string
+        resolution:
+          type: string
+        width:
+          type: integer
+        height:
+          type: integer
+        tags:
+          type: array
+          items:
+            type: string
+        fileSize:
+          type: ["integer", "null"]
+        isFeatured:
+          type: boolean
+          default: false
+        isAiGenerated:
+          type: boolean
+          default: false
+      required:
+        - title
+        - imageUrl
+        - downloadUrl
+        - category
+        - resolution
+        - width
+        - height
+
+    FavoriteEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: string
+        wallpaperId:
+          type: integer
+        createdAt:
+          type: string
+      required:
+        - id
+        - userId
+        - wallpaperId
+        - createdAt
+
+    FavoriteStatus:
+      type: object
+      properties:
+        isFavorited:
+          type: boolean
+      required:
+        - isFavorited
+
+    GenerateWallpaperBody:
+      type: object
+      properties:
+        prompt:
+          type: string
+        width:
+          type: integer
+          default: 3840
+        height:
+          type: integer
+          default: 2160
+        upscale:
+          type: boolean
+          default: false
+        category:
+          type: string
+          default: "Abstract"
+      required:
+        - prompt
+
+    GenerateWallpaperResponse:
+      type: object
+      properties:
+        imageUrl:
+          type: string
+        width:
+          type: integer
+        height:
+          type: integer
+        prompt:
+          type: string
+        wallpaper:
+          $ref: "#/components/schemas/Wallpaper"
+      required:
+        - imageUrl
+        - width
+        - height
+        - prompt
+        - wallpaper
+    UploadUrlRequest:
+      type: object
+      required: [name, size, contentType]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        size:
+          type: integer
+          minimum: 1
+        contentType:
+          type: string
+          minLength: 1
+    UploadUrlResponse:
+      type: object
+      required: [uploadURL, objectPath]
+      properties:
+        uploadURL:
+          type: string
+          format: uri
+        objectPath:
+          type: string
+        metadata:
+          $ref: '#/components/schemas/UploadUrlRequest'
+    ErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string

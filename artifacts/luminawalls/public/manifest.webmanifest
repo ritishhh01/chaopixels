@@ -1,0 +1,37 @@
+{
+  "name": "ChaoPixels",
+  "short_name": "ChaoPixels",
+  "description": "Discover and download stunning 4K/8K wallpapers & AI-generated art. Made by Chaotechh.",
+  "theme_color": "#0a0a0f",
+  "background_color": "#0a0a0f",
+  "display": "standalone",
+  "orientation": "any",
+  "start_url": "/",
+  "scope": "/",
+  "lang": "en",
+  "categories": ["photography", "utilities"],
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "AI Lab",
+      "short_name": "AI Lab",
+      "description": "Generate AI wallpapers",
+      "url": "/ai-lab",
+      "icons": [{ "src": "/favicon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "Favorites",
+      "short_name": "Favorites",
+      "description": "View saved wallpapers",
+      "url": "/favorites",
+      "icons": [{ "src": "/favicon.svg", "sizes": "any" }]
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "ZwDUePznKFtn23bk0nCrl"
+uri = "file://UPLOAD_GUIDE.md"
+type = "text"
+title = "ChaoPixels — Wallpaper Upload Guide"
